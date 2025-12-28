@@ -22,7 +22,7 @@ app.get('/api/songs', async (req, res) => {
         res.json(rows);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to fetch songs' });
+        res.status(500).json({ error: 'Failed to fetch songs', details: error.message });
     }
 });
 
