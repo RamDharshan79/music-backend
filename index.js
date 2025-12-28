@@ -13,7 +13,7 @@ app.use(express.json());
 
 // API Routes
 app.get('/', (req, res) => {
-    res.send("Music API is running 🎵");
+    res.send("Music API is running 🎵 (v2 - Debug Mode)");
 });
 
 app.get('/api/songs', async (req, res) => {
