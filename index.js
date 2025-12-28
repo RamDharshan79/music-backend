@@ -50,6 +50,10 @@ app.get('/api/history', async (req, res) => {
         `);
         res.json(rows);
     } catch (error) {
+        if (error.code === 'ER_NO_SUCH_TABLE') {
+            console.warn("History table missing, returning empty list.");
+            return res.json([]);
+        }
         console.error(error);
         res.status(500).json({ error: 'Failed to fetch history' });
     }
