@@ -36,7 +36,7 @@ app.post('/api/songs', async (req, res) => {
         res.status(201).json({ id: result.insertId, ...req.body });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to add song' });
+        res.status(500).json({ error: 'Failed to add song', details: error.message });
     }
 });
 
