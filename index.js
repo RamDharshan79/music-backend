@@ -18,49 +18,72 @@ app.get('/', (req, res) => {
 
 app.get('/api/songs', async (req, res) => {
     try {
-        // Try selecting with camelCase column names first (Cloud DB might use this)
-        const [rows] = await db.query('SELECT id, title, artist, album, audioUrl, artworkUrl, duration FROM songs ORDER BY id DESC');
-        res.json(rows);
+        // Robust strategy: Select ALL columns so we get whatever the DB has.
+        const [rows] = await db.query('SELECT * FROM songs ORDER BY id DESC');
+
+        // Normalize data before sending to frontend
+        const normalizedRows = rows.map(song => {
+            return {
+                ...song,
+                // Guarantee audioUrl exists, regardless of DB column name
+                audioUrl: song.audioUrl || song.audio_url,
+                artworkUrl: song.artworkUrl || song.artwork_url,
+
+                // Remove raw DB columns to keep response clean and secure
+                audio_url: undefined,
+                artwork_url: undefined
+            };
+        });
+
+        res.json(normalizedRows);
     } catch (error) {
-        // Fallback to snake_case if the above fails
-        if (error.code === 'ER_BAD_FIELD_ERROR') {
-             try {
-                const [rows] = await db.query('SELECT id, title, artist, album, audio_url as audioUrl, artwork_url as artworkUrl, duration FROM songs ORDER BY id DESC');
-                return res.json(rows);
-             } catch (e) {
-                 console.error(e);
-                 return res.status(500).json({ error: 'Failed to fetch songs (schema mismatch)', details: e.message });
-             }
-        }
-        console.error(error);
+        console.error("Error fetching songs:", error);
         res.status(500).json({ error: 'Failed to fetch songs', details: error.message });
     }
 });
 
 app.post('/api/songs', async (req, res) => {
-    const { title, artist, album, audioUrl, artworkUrl, duration } = req.body;
+    // 1. Normalize Input: Accept camelCase OR snake_case from frontend
+    const { title, artist, album, duration } = req.body;
+    const audioUrl = req.body.audioUrl || req.body.audio_url;
+    const artworkUrl = req.body.artworkUrl || req.body.artwork_url;
+
+    console.log("📝 Received Add Song Request:");
+    console.log("   Title:", title);
+    console.log("   Audio URL Length:", audioUrl ? audioUrl.length : 'MISSING');
+    console.log("   Artwork URL Length:", artworkUrl ? artworkUrl.length : 'MISSING');
+
+    // Validate URLs
+    if (!audioUrl) {
+        return res.status(400).json({ error: "Missing audioUrl" });
+    }
+
     try {
-        // Try inserting with camelCase first
+        // 2. Try Inserting (Default to camelCase columns first, standard for some ORMs)
+        // Note: We use the NORMALIZED variables (audioUrl, artworkUrl) which contain the actual strings.
         const [result] = await db.query(
             'INSERT INTO songs (title, artist, album, audioUrl, artworkUrl, duration) VALUES (?, ?, ?, ?, ?, ?)',
             [title, artist, album, audioUrl, artworkUrl, duration]
         );
-        res.status(201).json({ id: result.insertId, ...req.body });
+        console.log("   ✅ Inserted into camelCase columns. ID:", result.insertId);
+        res.status(201).json({ id: result.insertId, title, artist, album, audioUrl, artworkUrl, duration });
     } catch (error) {
-        // Fallback to snake_case
-         if (error.code === 'ER_BAD_FIELD_ERROR') {
-             try {
+        // 3. Fallback to snake_case columns
+        if (error.code === 'ER_BAD_FIELD_ERROR') {
+            try {
+                console.log("   ⚠️ camelCase columns missing. Retrying with snake_case...");
                 const [result] = await db.query(
                     'INSERT INTO songs (title, artist, album, audio_url, artwork_url, duration) VALUES (?, ?, ?, ?, ?, ?)',
-                    [title, artist, album, audioUrl, artworkUrl, duration]
+                    [title, artist, album, audioUrl, artworkUrl, duration] // Use the correctly verified values
                 );
-                return res.status(201).json({ id: result.insertId, ...req.body });
-             } catch (e) {
-                 console.error(e);
-                 return res.status(500).json({ error: 'Failed to add song (schema mismatch)', details: e.message });
-             }
+                console.log("   ✅ Inserted into snake_case columns. ID:", result.insertId);
+                return res.status(201).json({ id: result.insertId, title, artist, album, audioUrl, artworkUrl, duration });
+            } catch (e) {
+                console.error("   ❌ Insert Logic Failed (snake_case):", e.message);
+                return res.status(500).json({ error: 'Failed to add song (schema mismatch)', details: e.message });
+            }
         }
-        console.error(error);
+        console.error("   ❌ Insert Logic Failed:", error.message);
         res.status(500).json({ error: 'Failed to add song', details: error.message });
     }
 });
