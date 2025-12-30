@@ -12,6 +12,17 @@ app.use(cors());
 app.use(express.json());
 
 /* =========================
+   🔍 DEBUG ROUTE (PROOF)
+========================= */
+app.get('/api/debug/routes', (req, res) => {
+    res.json({
+        status: 'OK',
+        routesLoaded: true,
+        timestamp: new Date().toISOString()
+    });
+});
+
+/* =========================
    HEALTH CHECK
 ========================= */
 app.get('/', (req, res) => {
@@ -91,7 +102,6 @@ app.post('/api/songs', async (req, res) => {
    PLAY HISTORY
 ========================= */
 
-// Get history
 app.get('/api/history', async (req, res) => {
     try {
         const [rows] = await db.query(`
@@ -113,7 +123,6 @@ app.get('/api/history', async (req, res) => {
     }
 });
 
-// Save history
 app.post('/api/history', async (req, res) => {
     const { songId } = req.body;
     if (!songId) return res.status(400).json({ error: 'songId required' });
