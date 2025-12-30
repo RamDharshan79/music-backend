@@ -44,8 +44,7 @@ app.get('/api/songs', async (req, res) => {
                 album,
                 audioUrl,
                 artworkUrl,
-                duration,
-                createdAt
+                duration
             FROM songs
             ORDER BY id DESC
         `);
@@ -152,12 +151,17 @@ app.post('/api/playlists', async (req, res) => {
     res.json({ id: result.insertId, name });
 });
 
-// Get all playlists
+// ✅ FIXED: Get all playlists
 app.get('/api/playlists', async (req, res) => {
-    const [rows] = await db.query(
-        'SELECT * FROM playlists ORDER BY createdAt DESC'
-    );
-    res.json(rows);
+    try {
+        const [rows] = await db.query(
+            'SELECT * FROM playlists ORDER BY id DESC'
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error('❌ Failed to fetch playlists:', error.message);
+        res.status(500).json({ error: 'Failed to fetch playlists' });
+    }
 });
 
 // Add song to playlist
@@ -196,7 +200,7 @@ app.get('/api/playlists/:playlistId/songs', async (req, res) => {
         FROM songs s
         JOIN playlist_songs ps ON ps.song_id = s.id
         WHERE ps.playlist_id = ?
-        ORDER BY ps.created_at DESC
+        ORDER BY ps.id DESC
     `, [playlistId]);
 
     res.json(rows);
