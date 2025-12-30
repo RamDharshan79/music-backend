@@ -33,10 +33,10 @@ app.get('/api/songs', async (req, res) => {
                 title,
                 artist,
                 album,
-                audio_url AS audioUrl,
-                artwork_url AS artworkUrl,
+                audioUrl,
+                artworkUrl,
                 duration,
-                created_at AS createdAt
+                createdAt
             FROM songs
             ORDER BY id DESC
         `);
@@ -44,7 +44,10 @@ app.get('/api/songs', async (req, res) => {
         res.json(rows);
     } catch (error) {
         console.error("❌ Failed to fetch songs:", error.message);
-        res.status(500).json({ error: 'Failed to fetch songs' });
+        res.status(500).json({
+            error: 'Failed to fetch songs',
+            details: error.message
+        });
     }
 });
 
@@ -64,10 +67,17 @@ app.post('/api/songs', async (req, res) => {
         const [result] = await db.query(
             `
             INSERT INTO songs
-            (title, artist, album, audio_url, artwork_url, duration)
+            (title, artist, album, audioUrl, artworkUrl, duration)
             VALUES (?, ?, ?, ?, ?, ?)
             `,
-            [title, artist, album, audioUrl, artworkUrl || null, duration]
+            [
+                title,
+                artist,
+                album || null,
+                audioUrl,
+                artworkUrl || null,
+                duration || null
+            ]
         );
 
         res.status(201).json({
@@ -96,13 +106,13 @@ app.get('/api/history', async (req, res) => {
         const [rows] = await db.query(`
             SELECT
                 h.id,
-                h.song_id AS songId,
-                h.played_at AS playedAt,
+                h.songId,
+                h.playedAt,
                 s.title,
                 s.artist
             FROM history h
-            JOIN songs s ON h.song_id = s.id
-            ORDER BY h.played_at DESC
+            JOIN songs s ON h.songId = s.id
+            ORDER BY h.playedAt DESC
         `);
 
         res.json(rows);
@@ -111,7 +121,10 @@ app.get('/api/history', async (req, res) => {
             return res.json([]);
         }
         console.error("❌ Failed to fetch history:", error.message);
-        res.status(500).json({ error: 'Failed to fetch history' });
+        res.status(500).json({
+            error: 'Failed to fetch history',
+            details: error.message
+        });
     }
 });
 
