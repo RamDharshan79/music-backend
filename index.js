@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { db } from './db.js';
+import { getPersonalizedRecommendations, getListeningStats } from './recommendations.js';
+import recommendationRoutes from './routes/recommendations.js';
 
 dotenv.config();
 
@@ -10,6 +12,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Mount recommendation routes
+app.use('/api/recommendations', recommendationRoutes);
 
 /* =========================
    🔍 DEBUG ROUTE (PROOF)
@@ -132,6 +137,38 @@ app.post('/api/history', async (req, res) => {
     );
 
     res.json({ success: true });
+});
+
+/* =========================
+   RECOMMENDATIONS
+========================= */
+
+// Get personalized recommendations
+app.get('/api/recommendations/personalized', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 20;
+        const recommendations = await getPersonalizedRecommendations(limit);
+        
+        res.json({
+            recommendations,
+            count: recommendations.length,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Failed to get recommendations:', error.message);
+        res.status(500).json({ error: 'Failed to generate recommendations' });
+    }
+});
+
+// Get listening statistics (debug/analytics endpoint)
+app.get('/api/recommendations/stats', async (req, res) => {
+    try {
+        const stats = await getListeningStats();
+        res.json(stats);
+    } catch (error) {
+        console.error('❌ Failed to get stats:', error.message);
+        res.status(500).json({ error: 'Failed to get listening stats' });
+    }
 });
 
 /* =========================
