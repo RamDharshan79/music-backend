@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { db } from './db.js';
 import { getPersonalizedRecommendations, getListeningStats } from './recommendations.js';
 import recommendationRoutes from './routes/recommendations.js';
+import dailyMixesRoutes from './routes/dailyMixes.routes.js';
 
 dotenv.config();
 
@@ -15,6 +16,9 @@ app.use(express.json());
 
 // Mount recommendation routes
 app.use('/api/recommendations', recommendationRoutes);
+
+// Mount daily mixes routes
+app.use('/api/mixes', dailyMixesRoutes);
 
 /* =========================
    🔍 DEBUG ROUTE (PROOF)
@@ -168,6 +172,31 @@ app.get('/api/recommendations/stats', async (req, res) => {
     } catch (error) {
         console.error('❌ Failed to get stats:', error.message);
         res.status(500).json({ error: 'Failed to get listening stats' });
+    }
+});
+
+/* =========================
+   PUSH NOTIFICATIONS
+========================= */
+
+app.post('/api/push/register', async (req, res) => {
+    try {
+        const { token } = req.body;
+        
+        if (!token || typeof token !== 'string' || token.trim() === '') {
+            return res.status(400).json({ error: 'Invalid token' });
+        }
+        
+        await db.query(
+            'INSERT IGNORE INTO push_tokens (token) VALUES (?)',
+            [token.trim()]
+        );
+        
+        res.json({ success: true });
+        
+    } catch (error) {
+        console.error('❌ Push token registration error:', error.message);
+        res.status(500).json({ error: 'Failed to register push token' });
     }
 });
 
