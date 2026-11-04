@@ -1,7 +1,7 @@
 {
   "name": "music-backend",
-  "version": "1.0.0",
-  "description": "Backend for Music App",
+  "version": "1.1.0",
+  "description": "Music App Backend with Cloudflare R2",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -11,13 +11,15 @@
     "db:check": "node check_db.js",
     "db:reset": "node reset_db.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.850.0",
+    "@aws-sdk/s3-request-presigner": "^3.850.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "mysql2": "^3.9.2"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
