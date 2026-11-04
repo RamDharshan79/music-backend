@@ -5,6 +5,7 @@ import { db } from './db.js';
 import { getPersonalizedRecommendations, getListeningStats } from './recommendations.js';
 import recommendationRoutes from './routes/recommendations.js';
 import dailyMixesRoutes from './routes/dailyMixes.routes.js';
+import adminRoutes from './routes/adminroutes.js';
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/admin', adminRoutes);
 
 // Mount recommendation routes
 app.use('/api/recommendations', recommendationRoutes);
