@@ -1,6 +1,7 @@
 
 import express from 'express';
 import crypto from 'node:crypto';
+import { db } from '../db.js';
 import { adminAuth } from '../middleware/adminAuth.js';
 import {
     createUploadUrl,
@@ -149,5 +150,90 @@ router.post('/uploads/verify', adminAuth, async (req, res) => {
         });
     }
 });
+
+router.post('/songs', adminAuth, async (req, res) => {
+    try {
+        const {
+            title,
+            artist,
+            album,
+            duration,
+            audioKey,
+            artworkKey
+        } = req.body;
+
+        if (
+            !title?.trim() ||
+            !artist?.trim() ||
+            !audioKey?.startsWith('audio/')
+        ) {
+            return res.status(400).json({
+                error: 'Title, artist and valid audioKey are required'
+            });
+        }
+
+        if (artworkKey && !artworkKey.startsWith('image/')) {
+            return res.status(400).json({
+                error: 'Invalid artworkKey'
+            });
+        }
+
+        const audio = await verifyUploadedFile(audioKey);
+
+        if (!audio.contentType?.startsWith('audio/')) {
+            return res.status(400).json({
+                error: 'Uploaded audio file is invalid'
+            });
+        }
+
+        let artworkUrl = null;
+
+        if (artworkKey) {
+            const artwork = await verifyUploadedFile(artworkKey);
+
+            if (!artwork.contentType?.startsWith('image/')) {
+                return res.status(400).json({
+                    error: 'Uploaded artwork file is invalid'
+                });
+            }
+
+            artworkUrl =
+                `${process.env.R2_PUBLIC_BASE_URL}/${artworkKey}`;
+        }
+
+        const audioUrl =
+            `${process.env.R2_PUBLIC_BASE_URL}/${audioKey}`;
+
+        const [result] = await db.query(
+            `INSERT INTO songs
+            (title, artist, album, audioUrl, artworkUrl, duration)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+                title.trim(),
+                artist.trim(),
+                album || null,
+                audioUrl,
+                artworkUrl,
+                Number(duration) || null
+            ]
+        );
+
+        res.status(201).json({
+            success: true,
+            id: result.insertId,
+            title,
+            artist,
+            audioUrl,
+            artworkUrl
+        });
+
+    } catch (error) {
+        console.error('Admin song creation error:', error);
+        res.status(500).json({
+            error: 'Failed to save song'
+        });
+    }
+});
+
 
 export default router;
